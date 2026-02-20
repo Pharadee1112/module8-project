@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PM2.5 Predictor</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f6f6f6;
+            display: flex;
+            justify-content: center;
+            height: 60vh;
+        }
+
+        .box {
+            padding: 30px;
+            margin-top: 80px;
+            width: 320px;
+            /* ❌ ไม่มี background */
+            /* ❌ ไม่มี shadow */
+            /* ❌ ไม่มี border-radius */
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        p {
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        /* ช่องกรอกเท่ากัน */
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        /* ปุ่มอยู่กลาง + สั้นลง */
+        button {
+            display: block;
+            margin: 30px auto 0 auto;
+            padding: 10px;
+            width: 160px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        /* popup */
+        .popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            width: 320px;
+            text-align: center;
+        }
+
+        .close-btn {
+            margin-top: 15px;
+            padding: 8px 15px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: auto;
+        }
+
+        img {
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="box">
+        <h3>PM2.5 Predictor</h3>
+
+        <p>Date :</p>
+        <input id="date" type="date" min="2016-03-03" max="2019-03-18" required>
+
+        <p>Model Type :</p>
+        <select id="model_type" required>
+            <option value="Stochastic Gradient Descent">
+                Stochastic Gradient Descent
+            </option>
+            <option value="Neural Network (MLP)">
+                Neural Network (MLP)
+            </option>
+        </select>
+
+        <button onclick="predict()">Predict</button>
+    </div>
+
+    <!-- Popup -->
+    <div class="popup" id="popup">
+        <div class="popup-content">
+            <h3>Prediction Result</h3>
+            <p id="result"></p>
+            <img id="plot">
+            <button class="close-btn" onclick="closePopup()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function predict() {
+            const date = document.getElementById("date").value;
+            const model_type = document.getElementById("model_type").value;
+
+            if (!date) {
+                alert("Please select a date");
+                return;
+            }
+
+            fetch("/analyze", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `date=${encodeURIComponent(date)}&model_type=${encodeURIComponent(model_type)}`
+            })
+                .then(res => res.json())
+                .then(data => {
+
+                    if (data.error) {
+                        document.getElementById("result").innerText = data.error;
+                        document.getElementById("plot").style.display = "none";
+                    } else {
+                        document.getElementById("result").innerHTML = `
+                            <b>Date:</b> ${data.last_date}<br>
+                            <b>Predicted PM2.5:</b> ${data.predicted_close}<br>
+                            <b>MAE:</b> ${data.mae}<br>
+                            <b>MSE:</b> ${data.mse}
+                        `;
+
+                        document.getElementById("plot").src = data.plot + "?" + new Date().getTime();
+                        document.getElementById("plot").style.display = "block";
+                    }
+
+                    document.getElementById("popup").style.display = "flex";
+                })
+                .catch(err => {
+                    alert("Something went wrong!");
+                    console.error(err);
+                });
+        }
+
+        function closePopup() {
+            document.getElementById("popup").style.display = "none";
+        }
+    </script>
+
+</body>
+
+</html>
